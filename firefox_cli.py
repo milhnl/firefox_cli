@@ -33,6 +33,16 @@ def extract(args):
         sys.stdout.buffer.write(b)
 
 
+def compress(args):
+    content = sys.stdin.read()
+    with open(args.file, 'wb') as f:
+        f.write(b"mozLz40\0" + lz4.block.compress(content.encode('utf-8')))
+
+
+def get_path(args):
+    print(os.path.join(find_profile(args.profile), args.file))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-P', '--profile')
@@ -40,6 +50,12 @@ if __name__ == "__main__":
     parser_extract = subparsers.add_parser('extract')
     parser_extract.set_defaults(func=extract)
     parser_extract.add_argument('file')
+    parser_compress = subparsers.add_parser('compress')
+    parser_compress.set_defaults(func=compress)
+    parser_compress.add_argument('file')
+    parser_get_path = subparsers.add_parser('get_path')
+    parser_get_path.set_defaults(func=get_path)
+    parser_get_path.add_argument('file', nargs='?', default='')
     args = parser.parse_args()
     os.chdir(find_profile(args.profile))
     args.func(args)
