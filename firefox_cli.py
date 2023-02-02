@@ -2,6 +2,7 @@
 #firefox_cli - cli interface to firefox
 
 import argparse
+import configparser
 import glob
 import lz4.block
 import os.path
@@ -17,14 +18,39 @@ def firefox_profiles_path():
         return os.path.expandvars('$HOME/.mozilla/firefox')
 
 
+def get_path_from_profile(profile_home, profile):
+    if profile.getboolean('IsRelative'):
+        return os.path.join(profile_home, profile['Path'])
+    else:
+        return profile['Path']
+
+
 def find_profile(name):
     profile_home = firefox_profiles_path()
-    if name != None:
-        profile = os.path.join(profile_home, name)
-        if os.path.isdir(profile): return profile
-    #Needs quite some upgrades
-    profile = glob.glob(os.path.join(profile_home, '*.default-release'))[0]
-    if os.path.isdir(profile): return profile
+    cfg = configparser.ConfigParser()
+    cfg.read(os.path.join(profile_home, 'profiles.ini'))
+    profiles = [cfg[x] for x in cfg.sections() if 'Name' in cfg[x]]
+    installs = [cfg[x] for x in cfg.sections() if x.startswith('Install')]
+    if name == None:
+        if len(installs) == 0:
+            if len(profiles) == 0:
+                raise Exception("No profile found. Initialize one")
+            if len(profiles) == 1:
+                return get_path_from_profile(profile_home, profiles[0])
+            else:
+                for profile in profiles:
+                    if not profile.getboolean('Default'): continue
+                    return get_path_from_profile(profile_home, profile)
+                raise Exception("No default profile found. Specify a profile")
+        elif len(installs) == 1:
+            return os.path.join(profile_home, installs[0]['Default'])
+        else:
+            raise Exception("Multiple Install sections. Specify a profile")
+    else:
+        for profile in profiles:
+            if profile['Name'] != name: continue
+            return get_path_from_profile(profile_home, profile)
+        raise Exception("Could not find specified profile.")
 
 
 def extract(args):
