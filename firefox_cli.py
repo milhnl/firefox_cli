@@ -54,7 +54,7 @@ def find_profile(name):
 
 
 def extract(args):
-    with open(args.file, 'rb') as f:
+    with open(os.path.join(find_profile(args.profile), args.file), 'rb') as f:
         b = f.read()
         if b[:8] == b'mozLz40\0':
             b = lz4.block.decompress(b[8:])
@@ -63,7 +63,7 @@ def extract(args):
 
 def compress(args):
     content = sys.stdin.read()
-    with open(args.file, 'wb') as f:
+    with open(os.path.join(find_profile(args.profile), args.file), 'wb') as f:
         f.write(b"mozLz40\0" + lz4.block.compress(content.encode('utf-8')))
 
 
@@ -85,5 +85,4 @@ if __name__ == "__main__":
     parser_get_path.set_defaults(func=get_path)
     parser_get_path.add_argument('file', nargs='?', default='')
     args = parser.parse_args()
-    os.chdir(find_profile(args.profile))
     args.func(args)
