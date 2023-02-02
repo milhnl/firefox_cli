@@ -11,6 +11,8 @@ import sys
 def firefox_profiles_path():
     if os.name == 'nt':
         return os.path.expandvars('%APPDATA%\\Mozilla\\Firefox\\Profiles')
+    elif sys.platform == 'darwin':
+        return os.path.expandvars('$HOME/Library/Application Support/firefox')
     else:
         return os.path.expandvars('$HOME/.mozilla/firefox')
 
