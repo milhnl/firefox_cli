@@ -19,10 +19,12 @@ def firefox_profiles_path():
 
 
 def get_path_from_profile(profile_home, profile):
-    if profile.getboolean('IsRelative'):
+    if profile.getboolean('IsRelative', fallback=False):
         return os.path.join(profile_home, profile['Path'])
-    else:
+    elif 'Path' in profile:
         return profile['Path']
+    elif 'Default' in profile:
+        return os.path.join(profile_home, profile['Default'])
 
 
 def find_profile(name):
@@ -36,25 +38,31 @@ def find_profile(name):
             if len(profiles) == 0:
                 raise Exception("No profile found. Initialize one")
             if len(profiles) == 1:
-                return get_path_from_profile(profile_home, profiles[0])
+                return profiles[0]
             else:
                 for profile in profiles:
                     if not profile.getboolean('Default'): continue
-                    return get_path_from_profile(profile_home, profile)
+                    return profile
                 raise Exception("No default profile found. Specify a profile")
         elif len(installs) == 1:
-            return os.path.join(profile_home, installs[0]['Default'])
+            return installs[0]
         else:
             raise Exception("Multiple Install sections. Specify a profile")
     else:
         for profile in profiles:
             if profile['Name'] != name: continue
-            return get_path_from_profile(profile_home, profile)
+            return profile
         raise Exception("Could not find specified profile.")
 
 
+def get_profile_path(name, file=None):
+    return os.path.join(
+        get_path_from_profile(firefox_profiles_path(), find_profile(name)),
+        file if file else '')
+
+
 def extract(args):
-    with open(os.path.join(find_profile(args.profile), args.file), 'rb') as f:
+    with open(get_profile_path(args.profile, args.file), 'rb') as f:
         b = f.read()
         if b[:8] == b'mozLz40\0':
             b = lz4.block.decompress(b[8:])
@@ -63,12 +71,12 @@ def extract(args):
 
 def compress(args):
     content = sys.stdin.read()
-    with open(os.path.join(find_profile(args.profile), args.file), 'wb') as f:
+    with open(get_profile_path(args.profile, args.file), 'wb') as f:
         f.write(b"mozLz40\0" + lz4.block.compress(content.encode('utf-8')))
 
 
 def get_path(args):
-    print(os.path.join(find_profile(args.profile), args.file))
+    print(get_profile_path(args.profile, args.file))
 
 
 if __name__ == "__main__":
