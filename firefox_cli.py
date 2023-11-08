@@ -7,6 +7,7 @@ import glob
 import lz4.block
 import os.path
 import sys
+import shutil
 
 
 def firefox_profiles_path():
@@ -61,6 +62,21 @@ def get_profile_path(name, file=None):
         file if file else '')
 
 
+def remove_profile(args):
+    profile = find_profile(args.profile)
+    profile_home = firefox_profiles_path()
+    profile_path = get_path_from_profile(profile_home, profile)
+    cfg = configparser.ConfigParser()
+    cfg.optionxform = str
+    cfg.read(os.path.join(profile_home, 'profiles.ini'))
+    for section in cfg.sections():
+        if profile_path == get_path_from_profile(profile_home, cfg[section]):
+            cfg.remove_section(section)
+    shutil.rmtree(profile_path)
+    with open(os.path.join(profile_home, 'profiles.ini'), 'w') as f:
+        cfg.write(f, space_around_delimiters=False)
+
+
 def extract(args):
     with open(get_profile_path(args.profile, args.file), 'rb') as f:
         b = f.read()
@@ -83,6 +99,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('-P', '--profile')
     subparsers = parser.add_subparsers()
+    parser_get_path = subparsers.add_parser('remove_profile')
+    parser_get_path.set_defaults(func=remove_profile)
     parser_extract = subparsers.add_parser('extract')
     parser_extract.set_defaults(func=extract)
     parser_extract.add_argument('file')
