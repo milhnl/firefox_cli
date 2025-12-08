@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # firefox_cli - cli interface to firefox
 
-import argparse
-import configparser
-import glob
-import lz4.block
+from argparse import ArgumentParser, Namespace
+from configparser import ConfigParser, SectionProxy
+from typing import Optional, cast
+import lz4.block  # type: ignore
 import os.path
 import sys
 import shutil
 
 
-def firefox_profiles_path():
+def firefox_profiles_path() -> str:
     if os.name == "nt":
         return os.path.expandvars("%APPDATA%\\Mozilla\\Firefox\\Profiles")
     elif sys.platform == "darwin":
@@ -19,22 +19,25 @@ def firefox_profiles_path():
         return os.path.expandvars("$HOME/.mozilla/firefox")
 
 
-def get_path_from_profile(profile_home, profile):
+def get_path_from_profile(
+    profile_home: str, profile: SectionProxy
+) -> Optional[str]:
     if profile.getboolean("IsRelative", fallback=False):
         return os.path.join(profile_home, profile["Path"])
     elif "Path" in profile:
         return profile["Path"]
     elif "Default" in profile:
         return os.path.join(profile_home, profile["Default"])
+    return None
 
 
-def find_profile(name):
+def find_profile(name: Optional[str]) -> SectionProxy:
     profile_home = firefox_profiles_path()
-    cfg = configparser.ConfigParser()
+    cfg = ConfigParser()
     cfg.read(os.path.join(profile_home, "profiles.ini"))
     profiles = [cfg[x] for x in cfg.sections() if "Name" in cfg[x]]
     installs = [cfg[x] for x in cfg.sections() if x.startswith("Install")]
-    if name == None:
+    if name is None:
         if len(installs) == 0:
             if len(profiles) == 0:
                 raise Exception("No profile found. Initialize one")
@@ -58,19 +61,23 @@ def find_profile(name):
         raise Exception("Could not find specified profile.")
 
 
-def get_profile_path(name, file=None):
-    return os.path.join(
+def get_profile_path(name: str, file: Optional[str] = None) -> str:
+    profile_path = (
         get_path_from_profile(firefox_profiles_path(), find_profile(name)),
-        file if file else "",
     )
+    if profile_path is None:
+        raise Exception("Could not find profile path")
+    return os.path.join(cast(str, profile_path), file if file else "")
 
 
-def remove_profile(args):
+def remove_profile(args: Namespace) -> None:
     profile = find_profile(args.profile)
     profile_home = firefox_profiles_path()
     profile_path = get_path_from_profile(profile_home, profile)
-    cfg = configparser.ConfigParser()
-    cfg.optionxform = str
+    if profile_path is None:
+        raise Exception("Could not find profile path")
+    cfg = ConfigParser()
+    cfg.optionxform = lambda option: option  # type: ignore
     cfg.read(os.path.join(profile_home, "profiles.ini"))
     for section in cfg.sections():
         if profile_path == get_path_from_profile(profile_home, cfg[section]):
@@ -80,7 +87,7 @@ def remove_profile(args):
         cfg.write(f, space_around_delimiters=False)
 
 
-def extract(args):
+def extract(args: Namespace) -> None:
     with open(get_profile_path(args.profile, args.file), "rb") as f:
         b = f.read()
         if b[:8] == b"mozLz40\0":
@@ -88,18 +95,18 @@ def extract(args):
         sys.stdout.buffer.write(b)
 
 
-def compress(args):
+def compress(args: Namespace) -> None:
     content = sys.stdin.read()
     with open(get_profile_path(args.profile, args.file), "wb") as f:
         f.write(b"mozLz40\0" + lz4.block.compress(content.encode("utf-8")))
 
 
-def get_path(args):
+def get_path(args: Namespace) -> None:
     print(get_profile_path(args.profile, args.file))
 
 
-def main():
-    parser = argparse.ArgumentParser()
+def main() -> None:
+    parser = ArgumentParser()
     parser.add_argument("-P", "--profile")
     subparsers = parser.add_subparsers()
     parser_get_path = subparsers.add_parser("remove_profile")
