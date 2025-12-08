@@ -95,9 +95,9 @@ def remove_profile(args: Namespace) -> None:
     for section in cfg.sections():
         if profile_path == get_path_from_profile(profile_home, cfg[section]):
             cfg.remove_section(section)
-    shutil.rmtree(profile_path)
     with open(os.path.join(profile_home, "profiles.ini"), "w") as f:
         cfg.write(f, space_around_delimiters=False)
+    shutil.rmtree(profile_path)
 
 
 def extract(args: Namespace) -> None:
