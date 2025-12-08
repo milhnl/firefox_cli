@@ -98,7 +98,7 @@ def get_path(args):
     print(get_profile_path(args.profile, args.file))
 
 
-if __name__ == "__main__":
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-P", "--profile")
     subparsers = parser.add_subparsers()
@@ -115,3 +115,7 @@ if __name__ == "__main__":
     parser_get_path.add_argument("file", nargs="?", default="")
     args = parser.parse_args()
     args.func(args)
+
+
+if __name__ == "__main__":
+    main()
