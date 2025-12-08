@@ -9,6 +9,11 @@ requires-python = ">= 3.9"
 [tool.ruff]
 line-length = 79
 
+[dependency-groups]
+dev = [
+    "mypy>=1.19.0",
+]
+
 [project.scripts]
 firefox_cli = "firefox_cli:main"
 
