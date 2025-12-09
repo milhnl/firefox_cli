@@ -11,21 +11,28 @@ import sys
 import shutil
 
 
-browser_profile_dirs: dict[str, str] = {
-    "nt": "%APPDATA%\\Mozilla\\Firefox\\Profiles",
-    "darwin": "$HOME/Library/Application Support/firefox",
-    "unix": "$HOME/.mozilla/firefox",
+browser_profile_dirs: dict[str, dict[str, str]] = {
+    "firefox": {
+        "nt": "%APPDATA%\\Mozilla\\Firefox\\Profiles",
+        "darwin": "$HOME/Library/Application Support/firefox",
+        "unix": "$HOME/.mozilla/firefox",
+    },
+    "librewolf": {
+        "nt": "%APPDATA%\\Librewolf\\Profiles",
+        "darwin": "$HOME/Library/Application Support/librewolf",
+        "unix": "$HOME/.mozilla/librewolf",
+    },
 }
 
 
-def firefox_profiles_path() -> Path:
+def firefox_profiles_path(browser: str) -> Path:
     if os.name == "nt":
         platform = "nt"
     elif sys.platform == "darwin":
         platform = "darwin"
     else:
         platform = "unix"
-    return Path(os.path.expandvars(browser_profile_dirs[platform]))
+    return Path(os.path.expandvars(browser_profile_dirs[browser][platform]))
 
 
 def get_path_from_profile(
@@ -40,8 +47,8 @@ def get_path_from_profile(
     return None
 
 
-def find_profile(name: Optional[str]) -> SectionProxy:
-    profile_config = firefox_profiles_path().joinpath("profiles.ini")
+def find_profile(browser: str, name: Optional[str]) -> SectionProxy:
+    profile_config = firefox_profiles_path(browser).joinpath("profiles.ini")
     if not profile_config.is_file():
         raise Exception("No profiles found. Initialize your browser")
     cfg = ConfigParser()
@@ -73,9 +80,11 @@ def find_profile(name: Optional[str]) -> SectionProxy:
         raise Exception("Could not find specified profile.")
 
 
-def get_profile_path(name: str, file: Optional[str] = None) -> Path:
+def get_profile_path(
+    browser: str, name: Optional[str], file: Optional[str] = None
+) -> Path:
     profile_path = get_path_from_profile(
-        firefox_profiles_path(), find_profile(name)
+        firefox_profiles_path(browser), find_profile(browser, name)
     )
     if profile_path is None:
         raise Exception("Could not find profile path")
@@ -83,12 +92,13 @@ def get_profile_path(name: str, file: Optional[str] = None) -> Path:
 
 
 def remove_profile(args: Namespace) -> None:
-    profile_home = firefox_profiles_path()
+    profile_home = firefox_profiles_path(args.browser)
     profile_path = get_path_from_profile(
-        profile_home, find_profile(args.profile)
+        profile_home, find_profile(args.browser, args.profile)
     )
     if profile_path is None:
         raise Exception("Could not find profile path")
+
     cfg = ConfigParser()
     cfg.optionxform = lambda option: option  # type: ignore
     cfg.read(profile_home.joinpath("profiles.ini"))
@@ -101,7 +111,9 @@ def remove_profile(args: Namespace) -> None:
 
 
 def extract(args: Namespace) -> None:
-    with open(get_profile_path(args.profile, args.file), "rb") as f:
+    with open(
+        get_profile_path(args.browser, args.profile, args.file), "rb"
+    ) as f:
         b = f.read()
         if b[:8] == b"mozLz40\0":
             b = lz4.block.decompress(b[8:])
@@ -110,17 +122,25 @@ def extract(args: Namespace) -> None:
 
 def compress(args: Namespace) -> None:
     content = sys.stdin.read()
-    with open(get_profile_path(args.profile, args.file), "wb") as f:
+    with open(
+        get_profile_path(args.browser, args.profile, args.file), "wb"
+    ) as f:
         f.write(b"mozLz40\0" + lz4.block.compress(content.encode("utf-8")))
 
 
 def get_path(args: Namespace) -> None:
-    print(get_profile_path(args.profile, args.file))
+    print(get_profile_path(args.browser, args.profile, args.file))
 
 
 def main() -> None:
     parser = ArgumentParser()
     parser.add_argument("-P", "--profile")
+    parser.add_argument(
+        "-b",
+        "--browser",
+        default="firefox",
+        choices=browser_profile_dirs.keys(),
+    )
     subparsers = parser.add_subparsers()
     parser_get_path = subparsers.add_parser("remove_profile")
     parser_get_path.set_defaults(func=remove_profile)

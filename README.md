@@ -17,10 +17,11 @@ If you can't figure this out and want to use this tool anyway, message me.
 
 ### Usage
 
-    firefox_cli [-P PROFILE] <COMMAND...>
+    firefox_cli [-b BROWSER] [-P PROFILE] extract FILE
 
 ### Flags
 
+- `-b <BROWSER>`: `'firefox' | 'librewolf'`. Firefox is the default.
 - `-P <PROFILE>`: `string`. Profile name. If no profile is passed it tries to
   use the default one.
 
