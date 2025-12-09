@@ -17,7 +17,22 @@ If you can't figure this out and want to use this tool anyway, message me.
 
 ### Usage
 
-    firefox_cli [-P PROFILE] extract FILE
+    firefox_cli [-P PROFILE] <COMMAND...>
 
-Extracts the LZ4 compressed (json) file in your profile (pass the name with
-`-P`, otherwise it tries to find a `.default-release` profile) to stdout.
+### Flags
+
+- `-P <PROFILE>`: `string`. Profile name. If no profile is passed it tries to
+  use the default one.
+
+### Commands
+
+- `extract <FILE>`: Some files in the profile are compressed with LZ4. Pass the
+  relative path. You can use this one to get the currently open tabs with
+
+    ```sh
+    firefox_cli extract sessionstore-backups/recovery.jsonlz4
+    ```
+
+- `compress <FILE>`: The reverse operation.
+- `get_path [FILE]`: Get the path to the profile or a file in the profile.
+- `remove_profile`: Removes a profile
