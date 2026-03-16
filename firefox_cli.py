@@ -11,16 +11,23 @@ import sys
 import shutil
 
 
-browser_profile_dirs: dict[str, dict[str, str]] = {
+browser_profile_dirs: dict[str, dict[str, list[str]]] = {
     "firefox": {
-        "nt": "%APPDATA%\\Mozilla\\Firefox\\Profiles",
-        "darwin": "$HOME/Library/Application Support/firefox",
-        "unix": "$HOME/.mozilla/firefox",
+        "nt": [r"%APPDATA%\Mozilla\Firefox\Profiles"],
+        "darwin": ["$HOME/Library/Application Support/Firefox"],
+        "unix": [
+            "$XDG_CONFIG_HOME/mozilla/firefox",
+            "$HOME/.mozilla/firefox",
+        ],
     },
     "librewolf": {
-        "nt": "%APPDATA%\\Librewolf\\Profiles",
-        "darwin": "$HOME/Library/Application Support/librewolf",
-        "unix": "$HOME/.mozilla/librewolf",
+        "nt": [r"%APPDATA%\LibreWolf\Profiles"],
+        "darwin": ["$HOME/Library/Application Support/librewolf"],
+        "unix": [
+            "$XDG_CONFIG_HOME/librewolf/librewolf",
+            "$HOME/.mozilla/librewolf",
+            "$HOME/.librewolf",
+        ],
     },
 }
 
@@ -32,7 +39,12 @@ def firefox_profiles_path(browser: str) -> Path:
         platform = "darwin"
     else:
         platform = "unix"
-    return Path(os.path.expandvars(browser_profile_dirs[browser][platform]))
+        os.environ.setdefault("XDG_CONFIG_HOME", str(Path.home() / ".config"))
+    candidates = [
+        Path(os.path.expandvars(path))
+        for path in browser_profile_dirs[browser][platform]
+    ]
+    return next(filter(Path.is_dir, candidates), candidates[0])
 
 
 def get_path_from_profile(
