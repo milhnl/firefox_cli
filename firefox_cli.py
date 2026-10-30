@@ -65,12 +65,23 @@ def get_path_from_profile(
     return None
 
 
-def find_profile(browser: str, name: Optional[str]) -> SectionProxy:
-    profile_config = firefox_profiles_path(browser).joinpath("profiles.ini")
-    if not profile_config.is_file():
-        raise Exception("No profiles found. Initialize your browser")
+def read_config(profile_home: Path) -> ConfigParser:
     cfg = ConfigParser()
-    cfg.read(profile_config)
+    cfg.optionxform = str  # type: ignore
+    cfg.read(profile_home / "profiles.ini")
+    return cfg
+
+
+def write_config(profile_home: Path, cfg: ConfigParser) -> None:
+    with (profile_home / "profiles.ini").open("w") as f:
+        cfg.write(f, space_around_delimiters=False)
+
+
+def find_profile(browser: str, name: Optional[str]) -> SectionProxy:
+    profile_home = firefox_profiles_path(browser)
+    if not (profile_home / "profiles.ini").is_file():
+        raise Exception("No profiles found. Initialize your browser")
+    cfg = read_config(profile_home)
 
     profiles = [cfg[x] for x in cfg.sections() if "Name" in cfg[x]]
     installs = [cfg[x] for x in cfg.sections() if x.startswith("Install")]
@@ -111,20 +122,12 @@ def get_profile_path(
 
 def remove_profile(args: Namespace) -> None:
     profile_home = firefox_profiles_path(args.browser)
-    profile_path = get_path_from_profile(
-        profile_home, find_profile(args.browser, args.profile)
-    )
-    if profile_path is None:
-        raise Exception("Could not find profile path")
-
-    cfg = ConfigParser()
-    cfg.optionxform = lambda option: option  # type: ignore
-    cfg.read(profile_home.joinpath("profiles.ini"))
+    profile_path = get_profile_path(args.browser, args.profile)
+    cfg = read_config(profile_home)
     for section in cfg.sections():
         if profile_path == get_path_from_profile(profile_home, cfg[section]):
             cfg.remove_section(section)
-    with open(os.path.join(profile_home, "profiles.ini"), "w") as f:
-        cfg.write(f, space_around_delimiters=False)
+    write_config(profile_home, cfg)
     shutil.rmtree(profile_path)
 
 
