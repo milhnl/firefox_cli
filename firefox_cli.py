@@ -159,7 +159,7 @@ def main() -> None:
         default="firefox",
         choices=browser_profile_dirs.keys(),
     )
-    subparsers = parser.add_subparsers()
+    subparsers = parser.add_subparsers(dest="command", required=True)
     parser_get_path = subparsers.add_parser("remove_profile")
     parser_get_path.set_defaults(func=remove_profile)
     parser_extract = subparsers.add_parser("extract")
