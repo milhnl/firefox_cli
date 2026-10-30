@@ -44,7 +44,13 @@ def firefox_profiles_path(browser: str) -> Path:
         Path(os.path.expandvars(path))
         for path in browser_profile_dirs[browser][platform]
     ]
-    return next(filter(Path.is_dir, candidates), candidates[0])
+    return next(
+        filter(
+            lambda path: path.joinpath("profiles.ini").is_file(),
+            candidates,
+        ),
+        candidates[0],
+    )
 
 
 def get_path_from_profile(
