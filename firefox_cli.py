@@ -13,7 +13,7 @@ import shutil
 
 browser_profile_dirs: dict[str, dict[str, list[str]]] = {
     "firefox": {
-        "nt": [r"%APPDATA%\Mozilla\Firefox\Profiles"],
+        "nt": [r"%APPDATA%\Mozilla\Firefox"],
         "darwin": ["$HOME/Library/Application Support/Firefox"],
         "unix": [
             "$XDG_CONFIG_HOME/mozilla/firefox",
@@ -21,7 +21,7 @@ browser_profile_dirs: dict[str, dict[str, list[str]]] = {
         ],
     },
     "librewolf": {
-        "nt": [r"%APPDATA%\LibreWolf\Profiles"],
+        "nt": [r"%APPDATA%\LibreWolf"],
         "darwin": ["$HOME/Library/Application Support/librewolf"],
         "unix": [
             "$XDG_CONFIG_HOME/librewolf/librewolf",
