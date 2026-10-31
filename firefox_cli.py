@@ -3,10 +3,11 @@
 
 from argparse import ArgumentParser, Namespace
 from configparser import ConfigParser, SectionProxy
-from typing import Optional, cast
+from typing import Optional
 from pathlib import Path
 import lz4.block  # type: ignore
-import os.path
+import os
+import secrets
 import sys
 import shutil
 
@@ -120,6 +121,34 @@ def get_profile_path(
     return profile_path.joinpath(file if file else "")
 
 
+def create_profile(args: Namespace) -> None:
+    name = args.profile
+    profile_home = firefox_profiles_path(args.browser)
+    profile_home.mkdir(parents=True, exist_ok=True)
+    cfg = read_config(profile_home)
+    for x in cfg.sections():
+        if "Name" in cfg[x] and cfg[x]["Name"] == name:
+            if args.quiet:
+                return
+            raise Exception(
+                f"Profile already exists: {name} "
+                f"({get_path_from_profile(profile_home, cfg[x])})"
+            )
+    index = 0
+    while f"Profile{index}" in cfg:
+        index += 1
+    profile_dir = profile_home.joinpath(f"{secrets.token_hex(4)}.{name}")
+    profile_dir.mkdir()
+    cfg[f"Profile{index}"] = {
+        "Name": name,
+        "IsRelative": "1",
+        "Path": profile_dir.name,
+    }
+    if "General" not in cfg:
+        cfg["General"] = {"StartWithLastProfile": "1", "Version": "2"}
+    write_config(profile_home, cfg)
+
+
 def remove_profile(args: Namespace) -> None:
     profile_home = firefox_profiles_path(args.browser)
     profile_path = get_profile_path(args.browser, args.profile)
@@ -163,6 +192,14 @@ def main() -> None:
         choices=browser_profile_dirs.keys(),
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+    parser_create = subparsers.add_parser("create_profile")
+    parser_create.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="silently succeed if the profile already exists",
+    )
+    parser_create.set_defaults(func=create_profile)
     parser_get_path = subparsers.add_parser("remove_profile")
     parser_get_path.set_defaults(func=remove_profile)
     parser_extract = subparsers.add_parser("extract")
@@ -175,6 +212,8 @@ def main() -> None:
     parser_get_path.set_defaults(func=get_path)
     parser_get_path.add_argument("file", nargs="?", default="")
     args = parser.parse_args()
+    if args.command == "create_profile" and args.profile is None:
+        parser.error("create_profile requires -P/--profile")
     args.func(args)
 
 

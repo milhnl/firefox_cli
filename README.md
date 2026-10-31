@@ -36,4 +36,5 @@ If you can't figure this out and want to use this tool anyway, message me.
 
 - `compress <FILE>`: The reverse operation.
 - `get_path [FILE]`: Get the path to the profile or a file in the profile.
+- `create_profile`: Create a new profile (ensure created with `-q`)
 - `remove_profile`: Removes a profile
